@@ -13,7 +13,7 @@ class Prices:
         self.ins_name = ins_name
         self.start    = start or Prices._start
         self.end      = end or Prices._end
-        self.driver   = webdriver.Firefox()
+        self.driver   = webdriver.PhantomJS()
     
     def get_prices(self):
         if self.website == 'portfolio':
