@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import datetime as dt
 
 class Price:
     def __init__(self):
@@ -18,7 +19,7 @@ class Ticker:
         self.load_tickers()
         
     def load_tickers(self):
-        self.ticker = pd.read_excel(self.path)
+        self.ticker = pd.read_excel(os.path.join(self.path, self.filename))
     
     def save_tickers(self, name=None):
         fn = name or self.filename
@@ -64,11 +65,9 @@ class Ticker:
 class Trades:
     pathname = './Instruments'
     filename = 'trades.xlsx'
-    def __init__(self, instrument):
-        try:
-            self.instrument = instrument.instrument
-        except AttributeError:
-            print('Try to use an `Instrument` object as Input!')
+    def __init__(self, filename=None):
+        fn = self._check_file_path(filename)
+        self.load_trades()
     
     def load_trades(self, filename=None):
         fn = self._check_file_path(filename)
@@ -93,23 +92,44 @@ class Trades:
 
 
 class Instrument:
-    instrument_header = ['Date', 'Ticker', 'Amount', 'Price', 'Cost', 'Currency']
+    instrument_header = ['Date', 'Ticker', 'Amount', 'Price', 'Cost', 'Currency', 'Account']
     def __init__(self, dct, tickerdb=None):
         self.ticker = dct.get('Ticker')
         self.date = dct.get('Date')
         self.amount = dct.get('Amount')
         self.price = dct.get('Price')
         self.cost = dct.get('Cost')
+        self.account = dct.get('Account')
         self.currency = tickerdb.get_currency(ticker=dct.get('Ticker')[0])
         dct['Currency'] = self.currency
         self._construct_df(dct)
     
     def _construct_df(self, dct):
         self.instrument = pd.DataFrame(dct)
-
     
-    # def __str__(self):
-    #     return 'self.name w'.format(self)
+    def __str__(self):
+        return('{self.ticker} '.format(self=self))
+
+
+class Position:
+    _start_date = dt.date(2000,1,1)
+    _end_date = dt.date.today() - dt.timedelta(days=1)
+    def __init__(self, trades=None, position=None, start=None, end=None):
+        self.start_date = start or self._start_date
+        self.end_date = end or self._end_date
+        self._trades = trades
+        if position:
+            self.position=position
+        else:
+            self.calculate_positions()
+    
+    def calculate_positions(self):
+        self.position = self._trades.instrument.copy()
+        import pdb
+        pdb.set_trace()
+        rr = pd.date_range(start=self.start_date, end=self.end_date)
+        self.position = self.position.set_index('Date').reindex(rr).rename_axis('Date')
+
 
 class Portfolio:
     def __init__(self):
