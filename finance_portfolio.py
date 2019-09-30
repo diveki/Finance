@@ -2,12 +2,36 @@ import pandas as pd
 import os
 import datetime as dt
 
+def yesterday():
+    tmp = dt.date.today() - dt.timedelta(days=1)
+    return tmp
+
+def align_dates(df, to='D', start=None, end=None):
+    if df.index.name != 'Date':
+        if 'Date' not in df.columns:
+            raise KeyError('One of the column names must be `Date`!')
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.set_index('Date')
+    ticker = df.Ticker.unique()
+    tmp = pd.DataFrame()
+    if not end:
+        end = yesterday()
+    for tck in ticker:
+        if not start:
+            start = df[df['Ticker']==tck].index.min()
+        new_index = pd.date_range(start=start, end=end, freq=to)
+        tmp = pd.concat([tmp, df[df['Ticker']==tck].reindex(new_index, method='ffill')])
+    return tmp 
+
+
+
 class Price:
     def __init__(self):
         pass
 
     def load_prices(self, path):
         self.prices = pd.read_excel(path, index_col=0)
+        self.prices.index = pd.to_datetime(self.prices.index)
     
 
 class Ticker:
@@ -72,6 +96,8 @@ class Trades:
     def load_trades(self, filename=None):
         fn = self._check_file_path(filename)
         self.instrument = pd.read_excel(fn)
+        self.instrument['Date'] = pd.to_datetime(self.instrument['Date'])
+        self.instrument = self.instrument.set_index('Date')
     
     def save_trades(self, filename=None):
         fn = self._check_file_path(filename)
@@ -112,11 +138,9 @@ class Instrument:
 
 
 class Position:
-    _start_date = dt.date(2000,1,1)
-    _end_date = dt.date.today() - dt.timedelta(days=1)
     def __init__(self, trades=None, position=None, start=None, end=None):
-        self.start_date = start or self._start_date
-        self.end_date = end or self._end_date
+        self.start_date = start
+        self.end_date = end
         self._trades = trades
         if position:
             self.position=position
@@ -124,12 +148,8 @@ class Position:
             self.calculate_positions()
     
     def calculate_positions(self):
-        self.position = self._trades.instrument.copy()
-        import pdb
-        pdb.set_trace()
-        rr = pd.date_range(start=self.start_date, end=self.end_date)
-        self.position = self.position.set_index('Date').reindex(rr).rename_axis('Date')
-
+        self.position = align_dates(self._trades.instrument)[['Ticker', 'Account', 'Amount']]
+        
 
 class Portfolio:
     def __init__(self):
