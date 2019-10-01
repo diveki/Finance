@@ -148,7 +148,12 @@ class Position:
             self.calculate_positions()
     
     def calculate_positions(self):
-        self.position = align_dates(self._trades.instrument)[['Ticker', 'Account', 'Amount']]
+        self.position = self._trades.instrument[['Ticker', 'Account', 'Amount']].copy()
+        # self.position.loc[:,'Position'] = 1
+        self.position['Position'] = self.position.groupby(['Ticker', 'Account']).cumsum()
+        self.position=self.position.drop(columns=['Amount'])
+        self.position = align_dates(self.position)
+        
         
 
 class Portfolio:
