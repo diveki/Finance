@@ -1,18 +1,12 @@
-[INFO  - 2019-09-18T14:58:13.872Z] GhostDriver - Main - running on port 51009
-[INFO  - 2019-09-18T14:58:18.291Z] Session [bfc9c4e0-da24-11e9-b94e-794527b6b621] - page.settings - {"XSSAuditingEnabled":false,"javascriptCanCloseWindows":true,"javascriptCanOpenWindows":true,"javascriptEnabled":true,"loadImages":true,"localToRemoteUrlAccessEnabled":false,"userAgent":"Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/538.1 (KHTML, like Gecko) PhantomJS/2.1.1 Safari/538.1","webSecurityEnabled":true}
-[INFO  - 2019-09-18T14:58:18.291Z] Session [bfc9c4e0-da24-11e9-b94e-794527b6b621] - page.customHeaders:  - {}
-[INFO  - 2019-09-18T14:58:18.292Z] Session [bfc9c4e0-da24-11e9-b94e-794527b6b621] - Session.negotiatedCapabilities - {"browserName":"phantomjs","version":"2.1.1","driverName":"ghostdriver","driverVersion":"1.2.0","platform":"windows-10-32bit","javascriptEnabled":true,"takesScreenshot":true,"handlesAlerts":false,"databaseEnabled":false,"locationContextEnabled":false,"applicationCacheEnabled":false,"browserConnectionEnabled":false,"cssSelectorsEnabled":true,"webStorageEnabled":false,"rotatable":false,"acceptSslCerts":false,"nativeEvents":true,"proxy":{"proxyType":"direct"}}
-[INFO  - 2019-09-18T14:58:18.292Z] SessionManagerReqHand - _postNewSessionCommand - New Session Created: bfc9c4e0-da24-11e9-b94e-794527b6b621
-[INFO  - 2019-09-18T14:59:33.624Z] SessionManagerReqHand - _cleanupWindowlessSessions - Asynchronous Sessions clean-up phase starting NOW
-mjs://platform/console++.js:263 in error
-[ERROR - 2019-09-18T14:58:36.867Z] Session [bfc9c4e0-da24-11e9-b94e-794527b6b621] - page.onError - stack:
-  (anonymous function) (https://assets.portfolio.hu/js/app.js?id=068ff2a6b604521b6142:1)
-
-  phantomjs://platform/console++.js:263 in error
-[ERROR - 2019-09-18T14:58:36.867Z] Session [bfc9c4e0-da24-11e9-b94e-794527b6b621] - page.onError - msg: TypeError: undefined is not a constructor (evaluating 'Object.setPrototypeOf(n,s.prototype)')
-
-  phantomjs://platform/console++.js:263 in error
-[ERROR - 2019-09-18T14:58:36.867Z] Session [bfc9c4e0-da24-11e9-b94e-794527b6b621] - page.onError - stack:
-  (anonymous function) (https://assets.portfolio.hu/js/app.js?id=068ff2a6b604521b6142:1)
-
-  phantomjs://platform/console++.js:263 in error
+[INFO  - 2019-11-16T16:00:22.537Z] GhostDriver - Main - running on port 59039
+[INFO  - 2019-11-16T16:00:22.929Z] Session [3237d3d0-088a-11ea-97ad-17aa0a30849f] - page.settings - {"XSSAuditingEnabled":false,"javascriptCanCloseWindows":true,"javascriptCanOpenWindows":true,"javascriptEnabled":true,"loadImages":true,"localToRemoteUrlAccessEnabled":false,"userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/602.1 (KHTML, like Gecko) PhantomJS/2.1.1 Version/9.0 Safari/602.1"}
+[INFO  - 2019-11-16T16:00:22.929Z] Session [3237d3d0-088a-11ea-97ad-17aa0a30849f] - page.customHeaders:  - {}
+[INFO  - 2019-11-16T16:00:22.929Z] Session [3237d3d0-088a-11ea-97ad-17aa0a30849f] - Session.negotiatedCapabilities - {"browserName":"phantomjs","version":"2.1.1","driverName":"ghostdriver","driverVersion":"1.2.0","platform":"linux-unknown-64bit","javascriptEnabled":true,"takesScreenshot":true,"handlesAlerts":false,"databaseEnabled":false,"locationContextEnabled":false,"applicationCacheEnabled":false,"browserConnectionEnabled":false,"cssSelectorsEnabled":true,"webStorageEnabled":false,"rotatable":false,"acceptSslCerts":false,"nativeEvents":true,"proxy":{"proxyType":"direct"}}
+[INFO  - 2019-11-16T16:00:22.929Z] SessionManagerReqHand - _postNewSessionCommand - New Session Created: 3237d3d0-088a-11ea-97ad-17aa0a30849f
+[INFO  - 2019-11-16T16:05:22.699Z] SessionManagerReqHand - _cleanupWindowlessSessions - Asynchronous Sessions clean-up phase starting NOW
+[ERROR - 2019-11-16T16:07:30.066Z] RouterReqHand - _handle.error - {"line":40,"column":28}
+[INFO  - 2019-11-16T16:10:22.699Z] SessionManagerReqHand - _cleanupWindowlessSessions - Asynchronous Sessions clean-up phase starting NOW
+[ERROR - 2019-11-16T16:11:41.858Z] RouterReqHand - _handle.error - {"line":40,"column":28}
+[INFO  - 2019-11-16T16:15:22.699Z] SessionManagerReqHand - _cleanupWindowlessSessions - Asynchronous Sessions clean-up phase starting NOW
+[INFO  - 2019-11-16T16:20:22.701Z] SessionManagerReqHand - _cleanupWindowlessSessions - Asynchronous Sessions clean-up phase starting NOW
+[INFO  - 2019-11-16T16:25:22.701Z] SessionManagerReqHand - _cleanupWindowlessSessions - Asynchronous Sessions clean-up phase starting NOW
