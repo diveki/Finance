@@ -2,9 +2,18 @@ import pandas as pd
 import os
 import datetime as dt
 
-def yesterday():
-    tmp = dt.date.today() - dt.timedelta(days=1)
+def last_not_weekend(tmp):
+    while tmp.weekday() > 4:
+        tmp = tmp - dt.timedelta(days=1)
     return tmp
+
+def yesterday(no_weekend=False):
+    tmp = dt.date.today() - dt.timedelta(days=1)
+    if no_weekend:
+        return tmp
+    else:
+        tmp = last_not_weekend(tmp)
+        return tmp
 
 def align_dates(df, to='D', start=None, end=None):
     if df.index.name != 'Date':
@@ -23,6 +32,60 @@ def align_dates(df, to='D', start=None, end=None):
         tmp = pd.concat([tmp, df[df['Ticker']==tck].reindex(new_index, method='ffill')])
     return tmp 
 
+
+class DataBase:
+    def __init__(self):
+        self.setup_connection()
+        self._load_thickers()
+
+    def setup_connection(self):
+        pass
+
+    def _load_thickers(self):
+        pass
+    
+    def list_tickers(self):
+        pass
+
+    def update(self):
+        last_dates = self._find_latest_dates()
+        newest_dates = [yesterday()] * last_dates.shape[0]
+        down_input = list(zip(last_dates.index, last_dates.Date, newest_dates))
+
+    def download(self):
+        pass
+
+    def load_history(self, tickers=[]):
+        pass
+
+    def _find_latest_dates(self):
+        return self.data.reset_index().groupby('Name').last()[['Date']]
+
+class DataBaseExcel(DataBase):
+    _path = './Instruments'
+    _tickers_name = 'tickers.xlsx' 
+    _history_name = 'data.xlsx'
+    
+    def _load_thickers(self):
+        path = os.path.join(self._path, self._tickers_name)
+        self.tickers_db = pd.read_excel(path)
+
+    def list_tickers(self):
+        return self.tickers_db['Ticker'].to_list()
+
+    def load_history(self, tickers=[]):
+        path = os.path.join(self._path, self._history_name)
+        df = pd.read_excel(path)
+        df.Date = pd.to_datetime(df.Date)
+        df = df.set_index('Date')
+        if not tickers:
+            self.data = df
+        else:
+            self.data = df[df.Name.isin(tickers)]
+
+
+class DataBaseDB(DataBase):
+    pass
 
 
 class Price:
