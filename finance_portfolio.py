@@ -67,41 +67,39 @@ class InitializeDownload:
     def initialize_output_type(self):
         pass
 
+    def _fill_input(self, sid, value):
+        inputElement = self.driver.find_element_by_id(sid)
+        inputElement.clear()
+        time.sleep(0.1)
+        inputElement.send_keys(value)
+        inputElement.send_keys(Keys.ENTER)
+
+    def _select_options(self, sid, svalue):
+        element = Select(self.driver.find_element_by_id(sid))
+        element.select_by_value(svalue)
+
 
 class InitializeDownload_BET(InitializeDownload):
-    def initialize_start_date(self):
-        sid = 'instrumentStartingDate'
-        inputElement = self.driver.find_element_by_id(sid)
-        inputElement.clear()
-        time.sleep(0.5)
-        inputElement.send_keys(self.start.strftime('%Y.%m.%d'))
-        inputElement.send_keys(Keys.ENTER)
+    def initialize_start_date(self, sid, value):
+         self._fill_input(sid, value)
 
-    def initialize_end_date(self):
-        sid = 'instrumentEndingDate'
-        inputElement = self.driver.find_element_by_id(sid)
-        inputElement.clear()
-        time.sleep(0.5)
-        inputElement.send_keys(self.start.strftime('%Y.%m.%d'))
-        inputElement.send_keys(Keys.ENTER)
+    def initialize_end_date(self, sid, value):
+        self._fill_input(sid, value)
 
     def initialize_instrument(self):
         pass
 
-    def initialize_time_range(self):
-        sid = 'instrumentResolutionInput'
-        svalue = 'DAY_TO_DAY'
-        element = Select(self.driver.find_element_by_id(sid))
-        element.select_by_value(svalue)
+    def initialize_time_range(self, sid, svalue):
+        self._select_options(sid, svalue)
         element1 = self.driver.find_elements_by_xpath("//div[@class='timeSelectorRow']")
         self.driver.execute_script("arguments[0].setAttribute('style','display: none;');",element1[0])
         self.driver.execute_script("arguments[0].setAttribute('style','visibility:visible;');",element1[1])
- 
-    def initialize_output_format(self):
-        pass
 
-    def initialize_output_type(self):
-        pass
+    def initialize_output_format(self, sid, svalue):
+        self._select_options(sid, svalue)
+
+    def initialize_output_type(self, sid, svalue):
+        self._select_options(sid, svalue)
 
 class DataBase:
     def __init__(self):
@@ -123,17 +121,23 @@ class DataBase:
         down_input = list(zip(last_dates.index, last_dates.Date, newest_dates))
 
     def download(self, instrument, start, end):
-        self._start_webdriver()
+        if not hasattr(self, 'driver'):
+            self._start_webdriver()
         url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
         self.driver.get(url)
         self._initialize_input(url, instrument, start, end)
-        # 
         # element.select_by_value('shares')
         # self.get_available_instruments()
 
     def _initialize_input(self, url, instrument, start, end):
         if 'bet.hu' in url:
             self._initialize = InitializeDownload_BET(self.driver, instrument, start, end)
+            self._initialize.initialize_time_range('instrumentResolutionInput', 'DAY_TO_DAY')
+            self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
+            self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
+            self._initialize.initialize_end_date('instrumentEndingDate', end.strftime('%Y.%m.%d'))
+            self._initialize.initialize_time_range('dataFormatInput', 'XLSX')
+            self._initialize.initialize_time_range('dataTypeInput', 'DETAILED')
 
     def _start_webdriver(self):
         chrome_options = webdriver.ChromeOptions()
