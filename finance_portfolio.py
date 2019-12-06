@@ -1,9 +1,14 @@
 import pandas as pd
 import os
 import datetime as dt
+import time
 from selenium import webdriver
 import requests
 from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 
 
 def last_not_weekend(tmp):
@@ -38,8 +43,11 @@ def align_dates(df, to='D', start=None, end=None):
 
 
 class InitializeDownload:
-    def __init__(self, driver):
+    def __init__(self, driver, instrument, start, end):
         self.driver = driver
+        self.instrument = instrument
+        self.start = start
+        self.end = end
 
     def initialize_start_date(self):
         pass
@@ -62,17 +70,33 @@ class InitializeDownload:
 
 class InitializeDownload_BET(InitializeDownload):
     def initialize_start_date(self):
-        pass
+        sid = 'instrumentStartingDate'
+        inputElement = self.driver.find_element_by_id(sid)
+        inputElement.clear()
+        time.sleep(0.5)
+        inputElement.send_keys(self.start.strftime('%Y.%m.%d'))
+        inputElement.send_keys(Keys.ENTER)
 
     def initialize_end_date(self):
-        pass
+        sid = 'instrumentEndingDate'
+        inputElement = self.driver.find_element_by_id(sid)
+        inputElement.clear()
+        time.sleep(0.5)
+        inputElement.send_keys(self.start.strftime('%Y.%m.%d'))
+        inputElement.send_keys(Keys.ENTER)
 
     def initialize_instrument(self):
         pass
 
     def initialize_time_range(self):
-        pass
-
+        sid = 'instrumentResolutionInput'
+        svalue = 'DAY_TO_DAY'
+        element = Select(self.driver.find_element_by_id(sid))
+        element.select_by_value(svalue)
+        element1 = self.driver.find_elements_by_xpath("//div[@class='timeSelectorRow']")
+        self.driver.execute_script("arguments[0].setAttribute('style','display: none;');",element1[0])
+        self.driver.execute_script("arguments[0].setAttribute('style','visibility:visible;');",element1[1])
+ 
     def initialize_output_format(self):
         pass
 
@@ -102,14 +126,14 @@ class DataBase:
         self._start_webdriver()
         url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
         self.driver.get(url)
-        self._initialize_input(url)
-        # element=Select(self.driver.find_element_by_id('exchange-type'))
+        self._initialize_input(url, instrument, start, end)
+        # 
         # element.select_by_value('shares')
         # self.get_available_instruments()
 
-    def _initialize_input(self, url):
+    def _initialize_input(self, url, instrument, start, end):
         if 'bet.hu' in url:
-            pass
+            self._initialize = InitializeDownload_BET(self.driver, instrument, start, end)
 
     def _start_webdriver(self):
         chrome_options = webdriver.ChromeOptions()
