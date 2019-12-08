@@ -86,8 +86,17 @@ class InitializeDownload_BET(InitializeDownload):
     def initialize_end_date(self, sid, value):
         self._fill_input(sid, value)
 
-    def initialize_instrument(self):
-        pass
+    def initialize_instrument_category(self, sid, category):
+        element1 = self.driver.find_elements_by_xpath("//div[@id='prompt']")
+        self.driver.execute_script("arguments[0].setAttribute('class','accordion-group open');",element1[0])
+        self._select_options(sid, category)
+
+    def initialize_instrument(self, instrument):
+        inputElement = self.driver.find_element_by_class_name('select2-search__field')
+        inputElement.clear()
+        time.sleep(0.1)
+        inputElement.send_keys(instrument)
+        inputElement.send_keys(Keys.ENTER)
 
     def initialize_time_range(self, sid, svalue):
         self._select_options(sid, svalue)
@@ -100,6 +109,7 @@ class InitializeDownload_BET(InitializeDownload):
 
     def initialize_output_type(self, sid, svalue):
         self._select_options(sid, svalue)
+
 
 class DataBase:
     def __init__(self):
@@ -124,12 +134,11 @@ class DataBase:
         if not hasattr(self, 'driver'):
             self._start_webdriver()
         url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
+        cat = self.tickers_db[self.tickers_db.Ticker == instrument].Category.values[0]
         self.driver.get(url)
-        self._initialize_input(url, instrument, start, end)
-        # element.select_by_value('shares')
-        # self.get_available_instruments()
+        self._initialize_input(url, instrument, cat, start, end)
 
-    def _initialize_input(self, url, instrument, start, end):
+    def _initialize_input(self, url, instrument, cat, start, end):
         if 'bet.hu' in url:
             self._initialize = InitializeDownload_BET(self.driver, instrument, start, end)
             self._initialize.initialize_time_range('instrumentResolutionInput', 'DAY_TO_DAY')
@@ -138,6 +147,7 @@ class DataBase:
             self._initialize.initialize_end_date('instrumentEndingDate', end.strftime('%Y.%m.%d'))
             self._initialize.initialize_time_range('dataFormatInput', 'XLSX')
             self._initialize.initialize_time_range('dataTypeInput', 'DETAILED')
+            self._initialize.initialize_instrument_category('promptCategoryInput', cat)
 
     def _start_webdriver(self):
         chrome_options = webdriver.ChromeOptions()
@@ -149,7 +159,7 @@ class DataBase:
         pass
 
     def _find_latest_dates(self):
-        return self.data.reset_index().groupby('Name').last()[['Date']]
+        return self.data.reset_index().groupby('Name').last()[['Date', 'Category']]
 
 class DataBaseExcel(DataBase):
     _path = './Instruments'
