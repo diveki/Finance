@@ -43,11 +43,12 @@ def align_dates(df, to='D', start=None, end=None):
 
 
 class InitializeDownload:
-    def __init__(self, driver, instrument, start, end):
+    def __init__(self, driver, instrument, cat, start, end):
         self.driver = driver
         self.instrument = instrument
         self.start = start
         self.end = end
+        self.category = cat
 
     def initialize_start_date(self):
         pass
@@ -75,7 +76,9 @@ class InitializeDownload:
         inputElement.send_keys(Keys.ENTER)
 
     def _select_options(self, sid, svalue):
-        element = Select(self.driver.find_element_by_id(sid))
+        eid = self.driver.find_element_by_id(sid)
+        # eid.click()
+        element = Select(sid)
         element.select_by_value(svalue)
 
 
@@ -140,7 +143,7 @@ class DataBase:
 
     def _initialize_input(self, url, instrument, cat, start, end):
         if 'bet.hu' in url:
-            self._initialize = InitializeDownload_BET(self.driver, instrument, start, end)
+            self._initialize = InitializeDownload_BET(self.driver, instrument, cat, start, end)
             self._initialize.initialize_time_range('instrumentResolutionInput', 'DAY_TO_DAY')
             self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
             self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
