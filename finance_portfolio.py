@@ -43,12 +43,15 @@ def align_dates(df, to='D', start=None, end=None):
 
 
 class InitializeDownload:
-    def __init__(self, driver, instrument, cat, start, end):
-        self.driver = driver
+    def __init__(self, instrument, cat, iid, start, end):
         self.instrument = instrument
         self.start = start
         self.end = end
         self.category = cat
+        self.iid = iid
+
+    def create_payload(self):
+        pass
 
     def initialize_start_date(self):
         pass
@@ -83,35 +86,50 @@ class InitializeDownload:
 
 
 class InitializeDownload_BET(InitializeDownload):
-    def initialize_start_date(self, sid, value):
-         self._fill_input(sid, value)
 
-    def initialize_end_date(self, sid, value):
-        self._fill_input(sid, value)
+    def create_payload(self):
+        maps = self._bet_category_mapping()
+        self.payload = {}
+        self.payload['startingValue'] = self.start.strftime('%Y.%m.%d.')
+        self.payload['endingValue'] = self.end.strftime('%Y.%m.%d.')
+        self.payload['resolution'] = 'DAY_TO_DAY'
+        self.payload['market'] = 'PROMPT'
+        self.payload['currentCategory'] = self.category
+        self.payload['format'] = 'CSV'
+        self.payload['type'] = 'DETAILED'
+        self.payload['selectionList'] = [{
+            'category': maps[self.category],
+            'selectedInstruments': [{
+                'id': str(self.iid),
+                'code': self.instrument
+            }]}]
 
-    def initialize_instrument_category(self, sid, category):
-        element1 = self.driver.find_elements_by_xpath("//div[@id='prompt']")
-        self.driver.execute_script("arguments[0].setAttribute('class','accordion-group open');",element1[0])
-        self._select_options(sid, category)
+    def initialize_header(self):
+        self.header = {
+        # 'POST': '/Prices-and-Markets/Data-download/$rspid0x117390x12/$rihistoricalGenerator?_csrf=ab591984-9d7b-43a8-8083-26dc6c5b3401 HTTP/1.1',
+        #         'Host': 'bse.hu',
+                # 'Connection': 'keep-alive',
+                # 'Content-Length': '269',
+        #         'Origin': 'https://bse.hu',
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36',
+                'Content-type': 'application/json',
+                # 'Accept': '*/*',
+                # 'Sec-Fetch-Site': 'same-origin',
+                # 'Sec-Fetch-Mode': 'cors',
+                # 'Referer': 'https://bse.hu/',
+                # 'Accept-Encoding': 'gzip, deflate, br',
+                # 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                # 'Cookie': 'JSESSIONID=1CC049271B52F71ECA166C2DB90D20D2; _ga=GA1.2.2063765911.1575927554; _gid=GA1.2.370637015.1575927554; cookiesAcceptWarning=null'
+                }
 
-    def initialize_instrument(self, instrument):
-        inputElement = self.driver.find_element_by_class_name('select2-search__field')
-        inputElement.clear()
-        time.sleep(0.1)
-        inputElement.send_keys(instrument)
-        inputElement.send_keys(Keys.ENTER)
-
-    def initialize_time_range(self, sid, svalue):
-        self._select_options(sid, svalue)
-        element1 = self.driver.find_elements_by_xpath("//div[@class='timeSelectorRow']")
-        self.driver.execute_script("arguments[0].setAttribute('style','display: none;');",element1[0])
-        self.driver.execute_script("arguments[0].setAttribute('style','visibility:visible;');",element1[1])
-
-    def initialize_output_format(self, sid, svalue):
-        self._select_options(sid, svalue)
-
-    def initialize_output_type(self, sid, svalue):
-        self._select_options(sid, svalue)
+    def _bet_category_mapping(self):
+        r = requests.get('https://bse.hu/pages/data-download/$rspid0x117390x12/$rimainCategory?marketType=prompt')
+        if r.status_code == 200:
+            prompts = r.json()
+            mapping = {list(xx.values())[0]:list(xx.values())[1] for xx in prompts}
+            return mapping
+        else:
+            raise ValueError('requests.get for category mapping did not succeed')
 
 
 class DataBase:
@@ -129,28 +147,19 @@ class DataBase:
         pass
 
     def update(self):
-        last_dates = self._find_latest_dates()
-        newest_dates = [yesterday()] * last_dates.shape[0]
-        down_input = list(zip(last_dates.index, last_dates.Date, newest_dates))
+        pass
+        # last_dates = self._find_latest_dates()
+        # newest_dates = [yesterday()] * last_dates.shape[0]
+        # down_input = list(zip(last_dates.index, last_dates.Date, newest_dates))
 
     def download(self, instrument, start, end):
-        if not hasattr(self, 'driver'):
-            self._start_webdriver()
-        url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
-        cat = self.tickers_db[self.tickers_db.Ticker == instrument].Category.values[0]
-        self.driver.get(url)
-        self._initialize_input(url, instrument, cat, start, end)
-
-    def _initialize_input(self, url, instrument, cat, start, end):
-        if 'bet.hu' in url:
-            self._initialize = InitializeDownload_BET(self.driver, instrument, cat, start, end)
-            self._initialize.initialize_time_range('instrumentResolutionInput', 'DAY_TO_DAY')
-            self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
-            self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
-            self._initialize.initialize_end_date('instrumentEndingDate', end.strftime('%Y.%m.%d'))
-            self._initialize.initialize_time_range('dataFormatInput', 'XLSX')
-            self._initialize.initialize_time_range('dataTypeInput', 'DETAILED')
-            self._initialize.initialize_instrument_category('promptCategoryInput', cat)
+        pass
+        # if not hasattr(self, 'driver'):
+        #     self._start_webdriver()
+        # url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
+        # cat = self.tickers_db[self.tickers_db.Ticker == instrument].Category.values[0]
+        # self.driver.get(url)
+        # self._initialize_input(url, instrument, cat, start, end)
 
     def _start_webdriver(self):
         chrome_options = webdriver.ChromeOptions()
@@ -163,6 +172,19 @@ class DataBase:
 
     def _find_latest_dates(self):
         return self.data.reset_index().groupby('Name').last()[['Date', 'Category']]
+
+    def _initialize_input(self, url, instrument, cat, iid, start, end):
+        if 'bet.hu' in url:
+            self._initialize = InitializeDownload_BET(instrument, cat, iid, start, end)
+            self._initialize.create_payload()
+            self._initialize.initialize_header()
+        # self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
+        # self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
+        # self._initialize.initialize_end_date('instrumentEndingDate', end.strftime('%Y.%m.%d'))
+        # self._initialize.initialize_time_range('dataFormatInput', 'XLSX')
+        # self._initialize.initialize_time_range('dataTypeInput', 'DETAILED')
+        # self._initialize.initialize_instrument_category('promptCategoryInput', cat)
+
 
 class DataBaseExcel(DataBase):
     _path = './Instruments'
@@ -185,6 +207,23 @@ class DataBaseExcel(DataBase):
             self.data = df
         else:
             self.data = df[df.Name.isin(tickers)]
+
+    def update(self):
+        last_dates = self._find_latest_dates()
+        newest_dates = [yesterday()] * last_dates.shape[0]
+        down_input = list(zip(last_dates.index, last_dates.Date, newest_dates))
+
+    def download(self, instrument, start, end):
+        # if not hasattr(self, 'driver'):
+            # self._start_webdriver()
+        url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
+        cat = self.tickers_db[self.tickers_db.Ticker == instrument].Category.values[0]
+        iid = self.tickers_db[self.tickers_db.Ticker == instrument].Id.values[0]
+        # self.driver.get(url)
+        self._initialize_input(url, instrument, cat, iid, start, end)
+
+
+
 
 
 class DataBaseDB(DataBase):
