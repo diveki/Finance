@@ -4,6 +4,9 @@ import datetime as dt
 import time
 from selenium import webdriver
 import requests
+import json
+from bs4 import BeautifulSoup
+from io import StringIO
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -43,12 +46,17 @@ def align_dates(df, to='D', start=None, end=None):
 
 
 class InitializeDownload:
-    def __init__(self, instrument, cat, iid, start, end):
+    def __init__(self, url, instrument, cat, iid, start, end):
         self.instrument = instrument
         self.start = start
         self.end = end
         self.category = cat
         self.iid = iid
+        self.url = url
+        self.get_csrf_and_sessionID()
+
+    def get_csrf_and_sessionID(self):
+        pass
 
     def create_payload(self):
         pass
@@ -87,6 +95,13 @@ class InitializeDownload:
 
 class InitializeDownload_BET(InitializeDownload):
 
+    def get_csrf_and_sessionID(self):
+        self.session = requests.session()
+        r = self.session.get(self.url)
+        self.cookies = r.cookies.values()[0]
+        soup = BeautifulSoup(r.text, 'html.parser')
+        self.csrf = soup.select_one('meta[name="_csrf"]')['content']
+
     def create_payload(self):
         maps = self._bet_category_mapping()
         self.payload = {}
@@ -106,21 +121,14 @@ class InitializeDownload_BET(InitializeDownload):
 
     def initialize_header(self):
         self.header = {
-        # 'POST': '/Prices-and-Markets/Data-download/$rspid0x117390x12/$rihistoricalGenerator?_csrf=ab591984-9d7b-43a8-8083-26dc6c5b3401 HTTP/1.1',
-        #         'Host': 'bse.hu',
-                # 'Connection': 'keep-alive',
-                # 'Content-Length': '269',
-        #         'Origin': 'https://bse.hu',
-                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
                 'Content-type': 'application/json',
-                # 'Accept': '*/*',
-                # 'Sec-Fetch-Site': 'same-origin',
-                # 'Sec-Fetch-Mode': 'cors',
-                # 'Referer': 'https://bse.hu/',
-                # 'Accept-Encoding': 'gzip, deflate, br',
-                # 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
-                # 'Cookie': 'JSESSIONID=1CC049271B52F71ECA166C2DB90D20D2; _ga=GA1.2.2063765911.1575927554; _gid=GA1.2.370637015.1575927554; cookiesAcceptWarning=null'
+                'Accept': '*/*',
+                'Cookie': '_ga=GA1.2.90851370.1575892786; _gid=GA1.2.1695595311.1575892786; JSESSIONID=' + self.cookies + '; _gat=1'
                 }
+    
+    def initialize_url(self):
+        self.data_url = 'https://bse.hu/pages/data-download/$rspid0x117390x12/$rihistoricalGenerator?_csrf=' + self.csrf
 
     def _bet_category_mapping(self):
         r = requests.get('https://bse.hu/pages/data-download/$rspid0x117390x12/$rimainCategory?marketType=prompt')
@@ -174,17 +182,19 @@ class DataBase:
         return self.data.reset_index().groupby('Name').last()[['Date', 'Category']]
 
     def _initialize_input(self, url, instrument, cat, iid, start, end):
-        if 'bet.hu' in url:
-            self._initialize = InitializeDownload_BET(instrument, cat, iid, start, end)
+        if 'bse.hu' in url:
+            if not hasattr(self, '_initialize'):
+                self._initialize = InitializeDownload_BET(url, instrument, cat, iid, start, end)
+                self._initialize.initialize_header()
+                self._initialize.initialize_url()
+            else:
+                self._initialize.instrument = instrument
+                self._initialize.category = cat
+                self._initialize.iid = iid
+                self._initialize.start = start
+                self._initialize.end = end
             self._initialize.create_payload()
-            self._initialize.initialize_header()
-        # self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
-        # self._initialize.initialize_start_date('instrumentStartingDate', start.strftime('%Y.%m.%d'))
-        # self._initialize.initialize_end_date('instrumentEndingDate', end.strftime('%Y.%m.%d'))
-        # self._initialize.initialize_time_range('dataFormatInput', 'XLSX')
-        # self._initialize.initialize_time_range('dataTypeInput', 'DETAILED')
-        # self._initialize.initialize_instrument_category('promptCategoryInput', cat)
-
+ 
 
 class DataBaseExcel(DataBase):
     _path = './Instruments'
@@ -221,6 +231,17 @@ class DataBaseExcel(DataBase):
         iid = self.tickers_db[self.tickers_db.Ticker == instrument].Id.values[0]
         # self.driver.get(url)
         self._initialize_input(url, instrument, cat, iid, start, end)
+        r=self._initialize.session.post(self._initialize.data_url, data=json.dumps(self._initialize.payload), headers=self._initialize.header)
+        if r.status_code == 200:
+            tmp = StringIO(r.text)
+            self.data_downloaded = pd.read_csv(tmp)
+            self.clean_downloaded_data()
+        else:
+            raise ValueError('status_code is not 200')
+
+    def clean_downloaded_data(self):
+        self.data_downloaded = self.data_downloaded.drop(columns='Volume (HUF value)')
+        self.data_downloaded.columns = ['Name', 'Date', 'Close', 'Volume (#)', 'Volume (ccy)', 'Number of trades', 'Open', 'Low', 'High', 'Currency', 'Average price', 'Capitalization']
 
 
 
