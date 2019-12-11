@@ -156,19 +156,10 @@ class DataBase:
 
     def update(self):
         pass
-        # last_dates = self._find_latest_dates()
-        # newest_dates = [yesterday()] * last_dates.shape[0]
-        # down_input = list(zip(last_dates.index, last_dates.Date, newest_dates))
-
+   
     def download(self, instrument, start, end):
         pass
-        # if not hasattr(self, 'driver'):
-        #     self._start_webdriver()
-        # url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
-        # cat = self.tickers_db[self.tickers_db.Ticker == instrument].Category.values[0]
-        # self.driver.get(url)
-        # self._initialize_input(url, instrument, cat, start, end)
-
+     
     def _start_webdriver(self):
         chrome_options = webdriver.ChromeOptions()
         # chrome_options.add_argument('--headless')
@@ -179,7 +170,7 @@ class DataBase:
         pass
 
     def _find_latest_dates(self):
-        return self.data.reset_index().groupby('Name').last()[['Date', 'Category']]
+        return self.data.reset_index().groupby('Name').last()[['Date']]
 
     def _initialize_input(self, url, instrument, cat, iid, start, end):
         if 'bse.hu' in url:
@@ -199,7 +190,8 @@ class DataBase:
 class DataBaseExcel(DataBase):
     _path = './Instruments'
     _tickers_name = 'tickers.xlsx'
-    _history_name = 'data.xlsx'
+    _history_name = 'data.csv'
+    _is_up2date = False
 
     def _load_thickers(self):
         path = os.path.join(self._path, self._tickers_name)
@@ -210,38 +202,59 @@ class DataBaseExcel(DataBase):
 
     def load_history(self, tickers=[]):
         path = os.path.join(self._path, self._history_name)
-        df = pd.read_excel(path)
-        df.Date = pd.to_datetime(df.Date)
-        df = df.set_index('Date')
+        df = pd.read_csv(path)
+        df = self.set_index2Date(df)        
         if not tickers:
             self.data = df
         else:
             self.data = df[df.Name.isin(tickers)]
 
+    def set_index2Date(self, df, format = None):
+        df.Date = pd.to_datetime(df.Date, format=format)
+        df = df.set_index('Date')
+        return df
+
     def update(self):
-        last_dates = self._find_latest_dates()
-        newest_dates = [yesterday()] * last_dates.shape[0]
-        down_input = list(zip(last_dates.index, last_dates.Date, newest_dates))
+        if self._is_up2date:
+            print('Data is already up to date')
+        else:
+            self._is_up2date = True
+            last_dates = self._find_latest_dates() + dt.timedelta(days=1)
+            newest_dates = [yesterday()] * last_dates.shape[0]
+            self.update_input = list(zip(last_dates.index, pd.to_datetime(last_dates.Date), newest_dates))
+            self.data_update = pd.DataFrame()
+            for item in self.update_input:
+                print(f'Updating: {item[0]}')
+                try:
+                    # import pdb; pdb.set_trace()
+                    tmp = self.download(item[0], item[1], item[2])
+                    self.data_update = pd.concat([self.data_update, tmp])
+                except Exception as e:
+                    print(e)
+                    print(f'There was an issue with the update of {item[0]}')
+            self.data_update = self.set_index2Date(self.data_update, format='%d.%m.%Y.')
+            self.data = pd.concat([self.data, self.data_update])
+            self.data_update.to_csv(os.path.join(self._path, self._history_name), mode='a')
+            print(f'Update has ben saved to {self._path}/{self._history_name}')
+            
 
     def download(self, instrument, start, end):
-        # if not hasattr(self, 'driver'):
-            # self._start_webdriver()
         url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
         cat = self.tickers_db[self.tickers_db.Ticker == instrument].Category.values[0]
         iid = self.tickers_db[self.tickers_db.Ticker == instrument].Id.values[0]
-        # self.driver.get(url)
         self._initialize_input(url, instrument, cat, iid, start, end)
         r=self._initialize.session.post(self._initialize.data_url, data=json.dumps(self._initialize.payload), headers=self._initialize.header)
         if r.status_code == 200:
             tmp = StringIO(r.text)
-            self.data_downloaded = pd.read_csv(tmp)
-            self.clean_downloaded_data()
+            data_downloaded = pd.read_csv(tmp)
+            return self.clean_downloaded_data(data_downloaded)
         else:
             raise ValueError('status_code is not 200')
 
-    def clean_downloaded_data(self):
-        self.data_downloaded = self.data_downloaded.drop(columns='Volume (HUF value)')
-        self.data_downloaded.columns = ['Name', 'Date', 'Close', 'Volume (#)', 'Volume (ccy)', 'Number of trades', 'Open', 'Low', 'High', 'Currency', 'Average price', 'Capitalization']
+    def clean_downloaded_data(self, data_downloaded):
+        data_downloaded = data_downloaded.drop(columns='Volume (HUF value)')
+        data_downloaded.columns = ['Name', 'Date', 'Close', 'Volume (#)', 'Volume (ccy)', 'Number of trades', 'Open', 'Low', 'High', 'Currency', 'Average price', 'Capitalization']
+        return data_downloaded
 
 
 
