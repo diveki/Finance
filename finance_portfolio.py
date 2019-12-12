@@ -171,6 +171,14 @@ class DataBase:
 
     def _find_latest_dates(self):
         return self.data.reset_index().groupby('Name').last()[['Date']]
+    
+    def _check_last_dates(self, last_dates):
+        y = pd.DataFrame(index=last_dates.index)
+        y['Date'] = dt.date.today()
+        diff = pd.to_datetime(y.Date) - pd.to_datetime(last_dates.Date)
+        ind = diff[diff > dt.timedelta(1)].index
+        return last_dates.loc[ind,]
+    
 
     def _initialize_input(self, url, instrument, cat, iid, start, end):
         if 'bse.hu' in url:
@@ -185,6 +193,16 @@ class DataBase:
                 self._initialize.start = start
                 self._initialize.end = end
             self._initialize.create_payload()
+    
+    def clean_downloaded_data(self, data_downloaded):
+        data_downloaded = data_downloaded.drop(columns='Volume (HUF value)')
+        data_downloaded.columns = ['Name', 'Date', 'Close', 'Volume (#)', 'Volume (ccy)', 'Number of trades', 'Open', 'Low', 'High', 'Currency', 'Average price', 'Capitalization']
+        return data_downloaded
+
+    def save_updates(self, data_update, fullname, mode='w', header=True):
+        data_update.to_csv(fullname, mode=mode, header=header)
+        print(f'Update has ben saved to {fullname}')
+
  
 
 class DataBaseExcel(DataBase):
@@ -202,7 +220,12 @@ class DataBaseExcel(DataBase):
 
     def load_history(self, tickers=[]):
         path = os.path.join(self._path, self._history_name)
-        df = pd.read_csv(path)
+        if self._history_name.split('.')[1] == 'csv':
+            df = pd.read_csv(path)
+        elif self._history_name.split('.')[1] == 'xlsx':
+            df = pd.read_excel(path)
+        else:
+            raise ValueError(f'The file extention of {self._history_name} is not csv nor xlsx')
         df = self.set_index2Date(df)        
         if not tickers:
             self.data = df
@@ -218,26 +241,33 @@ class DataBaseExcel(DataBase):
         if self._is_up2date:
             print('Data is already up to date')
         else:
-            self._is_up2date = True
             last_dates = self._find_latest_dates() + dt.timedelta(days=1)
-            newest_dates = [yesterday()] * last_dates.shape[0]
-            self.update_input = list(zip(last_dates.index, pd.to_datetime(last_dates.Date), newest_dates))
-            self.data_update = pd.DataFrame()
-            for item in self.update_input:
-                print(f'Updating: {item[0]}')
-                try:
-                    # import pdb; pdb.set_trace()
-                    tmp = self.download(item[0], item[1], item[2])
-                    self.data_update = pd.concat([self.data_update, tmp])
-                except Exception as e:
-                    print(e)
-                    print(f'There was an issue with the update of {item[0]}')
-            self.data_update = self.set_index2Date(self.data_update, format='%d.%m.%Y.')
-            self.data = pd.concat([self.data, self.data_update])
-            self.data_update.to_csv(os.path.join(self._path, self._history_name), mode='a')
-            print(f'Update has ben saved to {self._path}/{self._history_name}')
-            
-
+            last_dates = self._check_last_dates(last_dates)
+            if last_dates.shape[0] == 0:
+                print('Data is already up to date')
+            else:
+                # import pdb; pdb.set_trace()
+                newest_dates = [yesterday()] * last_dates.shape[0]
+                self.update_input = list(zip(last_dates.index, pd.to_datetime(last_dates.Date), newest_dates))
+                self.data_update = pd.DataFrame()
+                errors = []
+                for item in self.update_input:
+                    print(f'Updating: {item[0]}')
+                    try:
+                        tmp = self.download(item[0], item[1], item[2])
+                        self.data_update = pd.concat([self.data_update, tmp])
+                        self.data_update = self.set_index2Date(self.data_update, format='%d.%m.%Y.')
+                    except Exception as e:
+                        errors.append(e)
+                        print(e)
+                        print(f'There was an issue with the update of {item[0]}')
+                if len(errors) < len(self.update_input):
+                    self.data = pd.concat([self.data, self.data_update])
+                    self.save_updates(self.data_update, os.path.join(self._path, self._history_name), mode = 'a', header=False)
+                    self._is_up2date = True
+                else:
+                    print('Did not update the database because of an issue!')
+                                
     def download(self, instrument, start, end):
         url = self.tickers_db[self.tickers_db.Ticker == instrument].URL.values[0]
         cat = self.tickers_db[self.tickers_db.Ticker == instrument].Category.values[0]
@@ -251,11 +281,7 @@ class DataBaseExcel(DataBase):
         else:
             raise ValueError('status_code is not 200')
 
-    def clean_downloaded_data(self, data_downloaded):
-        data_downloaded = data_downloaded.drop(columns='Volume (HUF value)')
-        data_downloaded.columns = ['Name', 'Date', 'Close', 'Volume (#)', 'Volume (ccy)', 'Number of trades', 'Open', 'Low', 'High', 'Currency', 'Average price', 'Capitalization']
-        return data_downloaded
-
+   
 
 
 
