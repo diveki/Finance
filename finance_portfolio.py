@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 import datetime as dt
 import time
@@ -41,7 +42,7 @@ def align_dates(df, to='D', start=None, end=None):
         if not start:
             start = df[df['Ticker']==tck].index.min()
         new_index = pd.date_range(start=start, end=end, freq=to)
-        tmp = pd.concat([tmp, df[df['Ticker']==tck].reindex(new_index, method='ffill')])
+        tmp = pd.concat([tmp, df[df['Ticker']==tck].reindex(new_index, method='ffill')], sort=False)
     return tmp
 
 
@@ -141,6 +142,7 @@ class InitializeDownload_BET(InitializeDownload):
 
 
 class DataBase:
+    _column_order = ['Name', 'Close', 'Volume (#)', 'Volume (ccy)', 'Number of trades', 'Open', 'Low', 'High', 'Currency', 'Average price', 'Capitalization', 'News']
     def __init__(self):
         self.setup_connection()
         self._load_thickers()
@@ -197,11 +199,18 @@ class DataBase:
     def clean_downloaded_data(self, data_downloaded):
         data_downloaded = data_downloaded.drop(columns='Volume (HUF value)')
         data_downloaded.columns = ['Name', 'Date', 'Close', 'Volume (#)', 'Volume (ccy)', 'Number of trades', 'Open', 'Low', 'High', 'Currency', 'Average price', 'Capitalization']
+        data_downloaded['News'] = np.nan 
         return data_downloaded
 
     def save_updates(self, data_update, fullname, mode='w', header=True):
         data_update.to_csv(fullname, mode=mode, header=header)
         print(f'Update has ben saved to {fullname}')
+    
+    def set_index2Date(self, df, format = None):
+        df.Date = pd.to_datetime(df.Date, format=format)
+        df = df.set_index('Date')
+        return df
+
 
  
 
@@ -232,12 +241,7 @@ class DataBaseExcel(DataBase):
         else:
             self.data = df[df.Name.isin(tickers)]
 
-    def set_index2Date(self, df, format = None):
-        df.Date = pd.to_datetime(df.Date, format=format)
-        df = df.set_index('Date')
-        return df
-
-    def update(self):
+    def update(self, save=True):
         if self._is_up2date:
             print('Data is already up to date')
         else:
@@ -255,15 +259,16 @@ class DataBaseExcel(DataBase):
                     print(f'Updating: {item[0]}')
                     try:
                         tmp = self.download(item[0], item[1], item[2])
-                        self.data_update = pd.concat([self.data_update, tmp])
+                        self.data_update = pd.concat([self.data_update, tmp], sort=False)
                         self.data_update = self.set_index2Date(self.data_update, format='%d.%m.%Y.')
                     except Exception as e:
                         errors.append(e)
                         print(e)
                         print(f'There was an issue with the update of {item[0]}')
                 if len(errors) < len(self.update_input):
-                    self.data = pd.concat([self.data, self.data_update])
-                    self.save_updates(self.data_update, os.path.join(self._path, self._history_name), mode = 'a', header=False)
+                    self.data = pd.concat([self.data, self.data_update], sort=False)
+                    if save:
+                        self.save_updates(self.data_update, os.path.join(self._path, self._history_name), mode = 'a', header=False)
                     self._is_up2date = True
                 else:
                     print('Did not update the database because of an issue!')
