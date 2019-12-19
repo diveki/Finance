@@ -225,7 +225,7 @@ class DataBase:
         else:    
             for item in ls:
                 self._check_input_format(item)
-                qq = self.data[self.data.Name==item[0]].News
+                qq = self.data.loc[self.data.Name==item[0], 'News']
                 qq[item[1]] = item[2]
                 self.data.loc[self.data.Name==item[0], 'News'] = qq
             print('News has been added')
