@@ -211,6 +211,35 @@ class DataBase:
         df = df.set_index('Date')
         return df
 
+    def add_news(self, ls=[]):
+        """
+        The method adds a new input to the News column for a given instrument and for a given date. 
+        Input: 
+            ls:  list of inputs consisting of (instrument, date, news)
+                instrument: the ticker of the instrument
+                date: date in datetime
+                news: strictly string
+        """          
+        if ls == []:
+            print('You need an input to perform the add_news function')
+        else:    
+            for item in ls:
+                self._check_input_format(item)
+                qq = self.data[self.data.Name==item[0]].News
+                qq[item[1]] = item[2]
+                self.data.loc[self.data.Name==item[0], 'News'] = qq
+            print('News has been added')
+
+    def _check_input_format(self,d):
+        if d[0] not in self.list_tickers():
+            raise ValueError('The first element of the input should be a valid ticker name!')
+        if type(d[2]) is not str:
+            raise TypeError('The third element of the input should be a `string`')
+        try:
+            pd.to_datetime(d[1])
+        except ValueError:
+            raise ValueError('The second element should be a valid date time format string or pandas datetime!') 
+
 
  
 
@@ -240,6 +269,7 @@ class DataBaseExcel(DataBase):
             self.data = df
         else:
             self.data = df[df.Name.isin(tickers)]
+        self.data = self.data[self._column_order]
 
     def update(self, save=True):
         if self._is_up2date:
@@ -260,12 +290,14 @@ class DataBaseExcel(DataBase):
                     try:
                         tmp = self.download(item[0], item[1], item[2])
                         self.data_update = pd.concat([self.data_update, tmp], sort=False)
-                        self.data_update = self.set_index2Date(self.data_update, format='%d.%m.%Y.')
                     except Exception as e:
                         errors.append(e)
                         print(e)
                         print(f'There was an issue with the update of {item[0]}')
                 if len(errors) < len(self.update_input):
+                    self.data_update = self.set_index2Date(self.data_update, format='%d.%m.%Y.')
+                    self.data_update = self.data_update[self._column_order]
+                    self.data_update.News = ''
                     self.data = pd.concat([self.data, self.data_update], sort=False)
                     if save:
                         self.save_updates(self.data_update, os.path.join(self._path, self._history_name), mode = 'a', header=False)
