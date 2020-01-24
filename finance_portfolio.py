@@ -464,3 +464,9 @@ class Portfolio:
 
     def add_new_position(self, instrument):
         pass
+
+
+if __name__ == '__main__':
+    a = DataBaseExcel()
+    a.load_history()
+    a.update()
